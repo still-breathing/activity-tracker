@@ -29,7 +29,16 @@ def test_total_distance_km_is_zero_when_never_moving():
     assert metrics.total_distance_km(streams) == 0.0
 
 
+def test_total_distance_km_handles_non_uniform_time_steps():
+    streams = _stream([0, 1, 11], velocity=[2, 2, 4])
+    assert metrics.total_distance_km(streams) == pytest.approx(0.032)
+
+
 # --- elapsed time -----------------------------------------------------------
+
+
+def test_elapsed_time_s_is_zero_for_single_sample():
+    assert metrics.elapsed_time_s(_stream([5], velocity=[3])) == 0
 
 
 def test_elapsed_time_s_for_fixture(ride_streams):
@@ -58,6 +67,11 @@ def test_moving_time_s_respects_min_speed(ride_streams):
 def test_moving_time_s_counts_intervals_not_samples():
     assert metrics.moving_time_s(_stream([0, 1, 2], velocity=[0.0, 5, 5])) == 2
     assert metrics.moving_time_s(_stream([0, 1, 2], velocity=[5, 0.0, 0.0])) == 0
+
+
+def test_moving_time_s_default_threshold_is_half_a_metre_per_second():
+    assert metrics.moving_time_s(_stream([0, 1, 2], velocity=[0.0, 0.5, 0.5])) == 0
+    assert metrics.moving_time_s(_stream([0, 1, 2], velocity=[0.0, 0.6, 0.6])) == 2
 
 
 def test_moving_time_s_equals_elapsed_time_without_stops():
@@ -108,6 +122,13 @@ def test_time_in_hr_zones_lower_bound_is_inclusive():
     streams = _stream([0, 1, 2, 3, 4], heartrate=[100, 120, 140, 160, 180])
     assert metrics.time_in_hr_zones(streams, max_hr=200) == {
         1: 0, 2: 1, 3: 1, 4: 1, 5: 1,
+    }
+
+
+def test_time_in_hr_zones_all_zero_without_heartrate_stream():
+    streams = _stream([0, 1, 2], velocity=[4, 4, 4])
+    assert metrics.time_in_hr_zones(streams, max_hr=190) == {
+        1: 0, 2: 0, 3: 0, 4: 0, 5: 0,
     }
 
 
