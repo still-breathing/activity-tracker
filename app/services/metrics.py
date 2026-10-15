@@ -2,11 +2,29 @@
 
 DEFAULT_MIN_SPEED = 0.5  # m/s; intervals at or below this are stops
 
-_ZONE_LOWER_BOUNDS = (0.6, 0.7, 0.8, 0.9)  # fraction of max HR starting zones 2-5
+_ZONE_LOWER_PERCENTS = (60, 70, 80, 90)  # percent of max HR starting zones 2-5
 
 
 def _data(streams, key):
     return streams.get(key, {}).get("data") or []
+
+
+def _validated(streams):
+    """Return (time, velocity, heartrate) lists, raising ValueError if inconsistent.
+
+    time must be non-decreasing; a non-empty velocity or heartrate stream
+    must match time in length. Absent or empty optional streams are allowed.
+    """
+    time = _data(streams, "time")
+    velocity = _data(streams, "velocity_smooth")
+    heartrate = _data(streams, "heartrate")
+    if any(b < a for a, b in zip(time, time[1:])):
+        raise ValueError("time must be non-decreasing")
+    if velocity and len(velocity) != len(time):
+        raise ValueError("velocity_smooth length differs from time")
+    if heartrate and len(heartrate) != len(time):
+        raise ValueError("heartrate length differs from time")
+    return time, velocity, heartrate
 
 
 def _intervals(streams):
@@ -14,9 +32,7 @@ def _intervals(streams):
 
     Speed and heart rate are None when their stream is missing.
     """
-    time = _data(streams, "time")
-    velocity = _data(streams, "velocity_smooth")
-    heartrate = _data(streams, "heartrate")
+    time, velocity, heartrate = _validated(streams)
     for i in range(len(time) - 1):
         yield (
             time[i + 1] - time[i],
@@ -36,7 +52,7 @@ def total_distance_km(streams):
 
 
 def elapsed_time_s(streams):
-    time = _data(streams, "time")
+    time, _, _ = _validated(streams)
     return time[-1] - time[0] if time else 0
 
 
@@ -56,12 +72,12 @@ def avg_speed_kmh(streams, min_speed=DEFAULT_MIN_SPEED):
 
 
 def avg_heart_rate(streams):
-    hr = _data(streams, "heartrate")
+    _, _, hr = _validated(streams)
     return sum(hr) / len(hr) if hr else None
 
 
 def max_heart_rate(streams):
-    hr = _data(streams, "heartrate")
+    _, _, hr = _validated(streams)
     return max(hr) if hr else None
 
 
@@ -69,10 +85,9 @@ def time_in_hr_zones(streams, max_hr):
     if max_hr <= 0:
         raise ValueError("max_hr must be positive")
     zones = {zone: 0 for zone in range(1, 6)}
-    bounds = [max_hr * f for f in _ZONE_LOWER_BOUNDS]
     for dt, _, _, hr in _intervals(streams):
         if hr is None:
             continue
-        zone = 1 + sum(hr >= bound for bound in bounds)
+        zone = 1 + sum(hr * 100 >= max_hr * pct for pct in _ZONE_LOWER_PERCENTS)
         zones[zone] += dt
     return zones
