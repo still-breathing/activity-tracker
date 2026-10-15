@@ -115,3 +115,29 @@ def test_time_in_hr_zones_lower_bound_is_inclusive():
 def test_time_in_hr_zones_rejects_invalid_max_hr(ride_streams, max_hr):
     with pytest.raises(ValueError):
         metrics.time_in_hr_zones(ride_streams, max_hr=max_hr)
+
+
+# --- average speed ----------------------------------------------------------
+
+
+def test_avg_speed_kmh_for_fixture(ride_streams):
+    # 71.15 m over 15 moving seconds = 4.743 m/s = 17.08 km/h.
+    assert metrics.avg_speed_kmh(ride_streams) == pytest.approx(17.08, abs=0.05)
+
+
+def test_avg_speed_kmh_uses_moving_time_not_elapsed_time(ride_streams):
+    elapsed_based = (
+        metrics.total_distance_km(ride_streams)
+        / (metrics.elapsed_time_s(ride_streams) / 3600)
+    )
+    assert metrics.avg_speed_kmh(ride_streams) > elapsed_based
+
+
+def test_avg_speed_kmh_for_constant_speed():
+    streams = _stream([0, 10, 20], velocity=[5, 5, 5])
+    assert metrics.avg_speed_kmh(streams) == pytest.approx(18.0)
+
+
+def test_avg_speed_kmh_is_zero_when_never_moving():
+    streams = _stream([0, 1, 2], velocity=[0, 0, 0])
+    assert metrics.avg_speed_kmh(streams) == 0.0

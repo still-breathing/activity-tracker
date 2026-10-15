@@ -14,4 +14,4 @@ Single-user PWA that shows my cycling activities from Strava.
 - Develop against fixtures in tests/fixtures/, not the live API.
 - Write tests first. One small change at a time.
 - Show a plan before editing multiple files.
-- Rides are Dhaka commutes, so moving time matters more than average speed.
+- Most of the rides are commutes, so moving time matters, average speed both matters.
