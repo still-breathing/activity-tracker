@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./tests/fixtures/real_*)",
+      "Bash(cat .env)",
+      "Bash(cat .env.*)",
+      "Bash(rm *)",
+      "Bash(sudo *)"
+    ]
+  }
+}
