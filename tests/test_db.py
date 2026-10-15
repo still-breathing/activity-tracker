@@ -106,3 +106,10 @@ def test_raw_duplicate_insert_violates_primary_key(conn):
             "INSERT INTO activities (id, name, start_time) VALUES (?, ?, ?)",
             (1001, "dup", START),
         )
+
+
+def test_name_with_sql_metacharacters_round_trips(conn):
+    nasty = "Robert'); DROP TABLE activities;"
+    db.upsert_activity(conn, 1, nasty, START)
+    assert db.get_activity(conn, 1)["name"] == nasty
+    assert _count(conn) == 1
